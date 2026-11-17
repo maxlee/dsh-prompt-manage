@@ -1,0 +1,75 @@
+{
+  "name": "dsh-prompt-manage",
+  "version": "0.2.0",
+  "private": false,
+  "description": "Reuse the prompts you have typed across DeepSeek Harness conversations: a searchable palette beside the model selector in the composer, and a sidebar page with the full history.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "screenshots/*.png",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "RELEASING.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-theme"
+      ]
+    }
+  },
+  "license": "MIT",
+  "author": "maxlee",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxlee/dsh-prompt-manage.git"
+  },
+  "homepage": "https://github.com/maxlee/dsh-prompt-manage",
+  "bugs": {
+    "url": "https://github.com/maxlee/dsh-prompt-manage/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "prompt",
+    "history",
+    "composer",
+    "palette",
+    "search"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.2-rc.3 <0.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "icon": "icon.svg",
+  "scripts": {
+    "check": "node --check index.js && node --check client.js",
+    "test": "node --test \"tests/*.test.js\"",
+    "prepublishOnly": "npm run check && npm test"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Prompt history",
+    "description": "Click the prompt history icon left of the model name in the chat input, or open Prompt history from the left sidebar, to reuse every prompt you have typed across conversations. The composer palette searches as you type and Apply inserts the prompt into the input at the caret; the sidebar page lists everything with project, session and time labels plus one-click copy. The index reads local session records only and never uploads content."
+  }
+}
