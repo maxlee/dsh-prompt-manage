@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.2
+
+Released on 2026-11-19.
+
+- Keep the composer prompt palette inside the viewport on short windows: its height now follows the room above the composer instead of forcing a minimum that clipped the search row.
+- Place the caret at the end of the draft after applying a history prompt (including command mode) and after optimizing a prompt.
+- Replace the composer history and optimizer glyphs with a clock-history icon and a magic-wand icon (ISC-licensed Lucide geometry), and refresh the README and plugin metadata descriptions accordingly.
+
+## 0.3.1
+
+Released on 2026-11-18.
+
+- Fix the composer command mode (`/goal`, `/plan`, and other slash commands): the prompt history **Apply** action and the **Optimize prompt** chip now stay usable while a command chip is active.
+- Applying a history prompt in command mode appends it after the command instead of replacing the leading slash command; optimizing reads and replaces only the command's argument text while preserving the command chip.
+
+## 0.3.0
+
+Released on 2026-11-18.
+
+- Add a sparkle **Optimize prompt** chip immediately left of the prompt history chip in the composer. It sends the current draft through the session's selected model with the editable system prompt in `prompts/prompt-optimizer.system.md` and replaces the draft with the model's `<optimized_prompt>` block.
+- The optimizer reads the system prompt from disk on every request so future tuning only needs a file edit; add its host service, POST route, timeout, input limit, error codes, and a success toast with **Undo**.
+- Keep the history palette, sidebar page, and all existing copy unchanged; the optimizer shares the composer tool row and theme tokens.
+
 ## 0.2.0
 
 Released on 2026-11-17.

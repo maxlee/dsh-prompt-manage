@@ -1,8 +1,8 @@
 {
   "name": "dsh-prompt-manage",
-  "version": "0.2.0",
+  "version": "0.3.2",
   "private": false,
-  "description": "Reuse the prompts you have typed across DeepSeek Harness conversations: a searchable palette beside the model selector in the composer, and a sidebar page with the full history.",
+  "description": "Reuse the prompts you have typed across DeepSeek Harness conversations, and rewrite a raw draft with the current model through an editable prompt-optimizer system prompt: a searchable palette beside the model selector in the composer, a magic-wand optimizer button, and a sidebar page with the full history.",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -14,13 +14,16 @@
   },
   "files": [
     "index.js",
+    "optimizer.js",
     "client.js",
     "cordis.patch.yml",
+    "prompts/*.md",
     "locale/*.json",
     "icon.svg",
     "screenshots/*.png",
     "README.md",
     "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "CHANGELOG.md",
     "RELEASING.md"
   ],
@@ -55,6 +58,7 @@
     "dsh-plugin",
     "prompt",
     "history",
+    "prompt-optimizer",
     "composer",
     "palette",
     "search"
@@ -68,7 +72,7 @@
   },
   "icon": "icon.svg",
   "scripts": {
-    "check": "node --check index.js && node --check client.js",
+    "check": "node --check index.js && node --check optimizer.js && node --check client.js",
     "test": "node --test \"tests/*.test.js\"",
     "prepublishOnly": "npm run check && npm test"
   }

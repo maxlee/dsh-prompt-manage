@@ -19,8 +19,21 @@ test('the package manifest points at files that exist', () => {
   assert.equal(pkg.dsh.bundle.patch, './cordis.patch.yml')
   assert.ok(pkg.files.includes('client.js'))
   assert.ok(pkg.files.includes('index.js'))
+  assert.ok(pkg.files.includes('optimizer.js'))
+  assert.ok(pkg.files.includes('prompts/*.md'))
   assert.ok(!pkg.private, 'the package must stay publishable')
   assert.equal(pkg.exports['./client'], './client.js')
+})
+
+test('the host and client wire the prompt optimizer together', () => {
+  const host = read('index.js')
+  const client = read('client.js')
+  assert.match(host, /createPromptOptimizer/)
+  assert.match(host, /OPTIMIZE_ROUTE/)
+  assert.match(client, /const OPTIMIZE_API = '\/api\/prompt-optimize'/)
+  assert.match(client, /data-prompt-optimize-entry/)
+  assert.match(client, /function ComposerOptimize/)
+  assert.match(client, /id: \`\$\{PANEL\}-optimize\`|id: '\$\{PANEL\}-optimize'/)
 })
 
 test('composer UI text exists in every locale dictionary', () => {
@@ -32,7 +45,36 @@ test('composer UI text exists in every locale dictionary', () => {
   const zhKeys = keysOf(zh)
   assert.ok(enKeys.length > 20, 'expected the full client dictionary')
   assert.deepEqual(zhKeys, enKeys)
-  for (const key of ['composerEntry', 'composerApply', 'composerViewAll', 'composerSearchPlaceholder']) {
+  for (const key of ['composerEntry', 'composerApply', 'composerViewAll', 'composerSearchPlaceholder', 'optimizeEmptyCommand', 'composerHintCommand']) {
     assert.ok(enKeys.includes(key), `missing dictionary key ${key}`)
   }
+  assert.match(source, /function splitCommandDraft/)
+  assert.match(source, /function replaceDraftPreservingCommand/)
+  assert.match(source, /function isFrozenPhase/)
+})
+
+test('the composer palette shrinks into the room above the composer', () => {
+  const client = read('client.js')
+  assert.doesNotMatch(client, /PALETTE_MIN_HEIGHT/)
+  assert.match(client, /const PALETTE_VIEWPORT_GAP = 12/)
+  assert.match(client, /anchor\.getBoundingClientRect\(\)\.top/)
+  assert.match(client, /document\.querySelector\('header'\)/)
+  assert.match(client, /Math\.max\(0, Math\.min\(PALETTE_MAX_HEIGHT, room, viewportRoom\)\)/)
+  assert.match(client, /max-height: calc\(100dvh - 24px\)/)
+  assert.match(client, /maxHeight > PALETTE_COMPACT_HEIGHT/)
+})
+
+test('applying and optimizing a prompt put the caret at the end', () => {
+  const client = read('client.js')
+  assert.match(client, /function placeCaretAtEnd\(ctx, sessionId\)/)
+  assert.match(client, /function detectDraftLength\(draft, occurrences, command\)/)
+  assert.match(client, /range\.selectNodeContents\(root\)/)
+  assert.ok((client.match(/placeCaretAtEnd\(ctx, sessionId\)/g) || []).length >= 3)
+})
+
+test('the composer history and optimizer glyphs use the new icon geometry', () => {
+  const client = read('client.js')
+  assert.match(client, /M3 12a9 9 0 1 0 9-9/)
+  assert.match(client, /wand-sparkles/)
+  assert.doesNotMatch(client, /strokeScale: 1\.45/)
 })

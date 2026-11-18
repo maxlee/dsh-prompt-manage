@@ -8,13 +8,20 @@
  * entry. Session titles, working directories, and workspace titles supply the
  * project/session labels the browser half renders.
  *
- * Nothing leaves the machine: the only Host surface is one local JSON route
- * consumed by this bundle's own Client half.
+ * Also serves the prompt optimizer: one POST route that streams the current
+ * session model through the prompt in `prompts/prompt-optimizer.system.md`
+ * and returns the text inside its `<optimized_prompt>` block.
+ *
+ * Both surfaces are local JSON routes consumed by this bundle's own Client
+ * half; only the optimizer's model request leaves the machine, through the
+ * provider route the composer already selected.
  */
+
+import { createPromptOptimizer, OPTIMIZE_ROUTE } from './optimizer.js'
 
 export const name = 'prompt-history'
 
-/** The route needs the Web server and Connection's trust fence; session services are read optionally so the plugin stays inert rather than throwing in profiles without them. */
+/** The routes need the Web server and Connection's trust fence; session services are read optionally so the plugin stays inert rather than throwing in profiles without them. */
 export const inject = ['webServer', 'connection']
 
 const ROUTE = '/api/prompt-history'
@@ -488,14 +495,22 @@ export function createPromptIndex(ctx) {
 export function apply(ctx) {
   ctx.effect(() => {
     const index = createPromptIndex(ctx)
-    const disposeRoute = ctx.webServer.register({
+    const optimizer = createPromptOptimizer(ctx)
+    const disposeIndexRoute = ctx.webServer.register({
       kind: 'exact',
       path: ROUTE,
       resource: (request) => index.handle(request),
     })
+    const disposeOptimizeRoute = ctx.webServer.register({
+      kind: 'exact',
+      path: OPTIMIZE_ROUTE,
+      handler: (req, res) => optimizer.handle(req, res),
+    })
     return () => {
-      disposeRoute()
+      disposeOptimizeRoute()
+      disposeIndexRoute()
       index.dispose()
+      optimizer.dispose()
     }
-  }, 'prompt-history: local prompt index route')
+  }, 'prompt-history: local prompt routes')
 }

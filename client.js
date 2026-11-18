@@ -11,6 +11,7 @@ window.__ModuleLoader__.load({
     const NS = 'prompt-history'
     const PANEL = 'prompt-history'
     const API = '/api/prompt-history'
+    const OPTIMIZE_API = '/api/prompt-optimize'
 
     const DICT = {
       en: {
@@ -64,7 +65,22 @@ window.__ModuleLoader__.load({
         composerCount: '{total} prompts',
         composerMatches: '{shown} of {total}',
         composerHint: 'Inserted at the caret',
+        composerHintCommand: 'Appended after the command',
         composerDismiss: 'Dismiss',
+        optimizeEntry: 'Optimize prompt',
+        optimizeBusy: 'Optimizing prompt…',
+        optimizeEmpty: 'Type or paste a prompt first',
+        optimizeEmptyCommand: 'Type or paste the command arguments first',
+        optimizeDone: 'Prompt optimized and replaced',
+        optimizeUndo: 'Undo',
+        optimizeFailed: 'Could not optimize the prompt',
+        optimizeErrorNoModel: 'Select a model for this session first.',
+        optimizeErrorUnavailable: 'The current model is unavailable.',
+        optimizeErrorTooLong: 'The prompt is too long to optimize.',
+        optimizeErrorInvalid: 'The model returned no usable prompt. Try again.',
+        optimizeErrorTimeout: 'The optimization timed out. Try again.',
+        optimizeErrorNetwork: 'Could not reach the optimizer service.',
+        optimizeDismiss: 'Dismiss',
       },
       zh: {
         navLabel: '提示词历史',
@@ -117,7 +133,22 @@ window.__ModuleLoader__.load({
         composerCount: '共 {total} 条',
         composerMatches: '匹配 {shown} / {total}',
         composerHint: '插入到光标处',
+        composerHintCommand: '追加到指令后',
         composerDismiss: '知道了',
+        optimizeEntry: '优化提示词',
+        optimizeBusy: '正在优化提示词…',
+        optimizeEmpty: '请先输入或粘贴提示词',
+        optimizeEmptyCommand: '请先在指令后输入或粘贴内容',
+        optimizeDone: '提示词已优化并替换',
+        optimizeUndo: '撤销',
+        optimizeFailed: '优化提示词失败',
+        optimizeErrorNoModel: '请先为当前会话选择一个模型。',
+        optimizeErrorUnavailable: '当前模型暂时不可用。',
+        optimizeErrorTooLong: '提示词太长，无法优化。',
+        optimizeErrorInvalid: '模型没有返回可用的提示词，请重试。',
+        optimizeErrorTimeout: '优化超时，请重试。',
+        optimizeErrorNetwork: '无法连接优化服务。',
+        optimizeDismiss: '关闭',
       },
     }
 
@@ -429,13 +460,15 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M2.2 4.4c0-.7.5-1.2 1.2-1.2h3l1.4 1.6h5.8c.7 0 1.2.5 1.2 1.2v6.4c0 .7-.5 1.2-1.2 1.2H3.4c-.7 0-1.2-.5-1.2-1.2V4.4Z' }))
     }
 
+    /**
+     * Clock-with-rewind arrow, the conventional history glyph. Drawn on a
+     * 24-unit grid (adapted from Lucide's ISC-licensed "history" icon) so the
+     * circle and hands stay crisp at the 16 px composer size.
+     */
     function HistoryGlyph(props) {
       const size = props && props.size ? props.size : 18
-      // The glyph is drawn on a 36-unit grid; a larger scale keeps its stroke
-      // weight readable when it is rendered at composer-icon size.
-      const weight = props && Number.isFinite(props.strokeScale) ? props.strokeScale : 1
       return h('svg', {
-        viewBox: '0 0 36 36',
+        viewBox: '0 0 24 24',
         width: size,
         height: size,
         fill: 'none',
@@ -443,13 +476,56 @@ window.__ModuleLoader__.load({
         style: { display: 'block', flex: 'none' },
       },
         h('path', {
-          d: 'M7.2 10.2c0-2 1.6-3.6 3.6-3.6h14.4c2 0 3.6 1.6 3.6 3.6v11.2c0 2-1.6 3.6-3.6 3.6H17.2L11 30v-5.1c-2.1-.2-3.8-1.9-3.8-4V10.2Z',
+          d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8',
           stroke: 'currentColor',
-          strokeWidth: 2.4 * weight,
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
           strokeLinejoin: 'round',
         }),
-        h('circle', { cx: 15.6, cy: 15.2, r: 4.1, stroke: 'currentColor', strokeWidth: 2.2 * weight }),
-        h('path', { d: 'M18.7 18.4 22 21.7', stroke: 'currentColor', strokeWidth: 2.2 * weight, strokeLinecap: 'round' }))
+        h('path', {
+          d: 'M3 3v5h5',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }),
+        h('path', {
+          d: 'M12 7v5l4 2',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }))
+    }
+
+    /**
+     * Magic wand with two sparkles — the familiar "enhance / rewrite with AI"
+     * metaphor. Paths adapted from Lucide's ISC-licensed "wand-sparkles" icon.
+     */
+    function SparkleGlyph(props) {
+      const size = props && props.size ? props.size : 18
+      return h('svg', {
+        viewBox: '0 0 24 24',
+        width: size,
+        height: size,
+        fill: 'none',
+        'aria-hidden': true,
+        style: { display: 'block', flex: 'none' },
+      },
+        h('path', {
+          d: 'm21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }),
+        h('path', { d: 'm14 7 3 3', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M5 6v4', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M19 14v4', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M10 2v2', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M7 8H3', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M21 16h-4', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M11 3H9', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }))
     }
 
     function EmptyIllustration() {
@@ -638,7 +714,10 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     const PALETTE_MAX_HEIGHT = 420
-    const PALETTE_MIN_HEIGHT = 180
+    /** Keep the palette fully inside the viewport; short windows shrink it instead of clipping the search row. */
+    const PALETTE_VIEWPORT_GAP = 12
+    /** Below this height the footer yields its space to the result list. */
+    const PALETTE_COMPACT_HEIGHT = 160
     const PALETTE_RESULT_LIMIT = 60
     const PALETTE_CACHE_TTL_MS = 30_000
     const PALETTE_SKELETON_ROWS = 3
@@ -682,27 +761,186 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Resolve the mounted session's input facade. The facade owns the Lexical
+     * editor and is the only surface that can restore a caret reliably.
+     */
+    function resolveComposerFacade(ctx, sessionId) {
+      if (!ctx) return null
+      try {
+        const sessions = ctx.get('sessions')
+        if (!sessions || typeof sessions.scope !== 'function') return null
+        const scoped = sessions.scope(sessionId)
+        if (!scoped || typeof scoped.get !== 'function') return null
+        const conversation = scoped.get('conversation')
+        const input = conversation && conversation.input
+        if (!input || typeof input.for !== 'function') return null
+        return input.for(scoped) || null
+      } catch {
+        return null
+      }
+    }
+
+    /**
      * Return the keyboard to the composer after the palette takes it. The
      * session-scoped facade restores Lexical's stored selection, which a bare
      * DOM focus on the contenteditable would drop.
      */
     function focusComposer(ctx, sessionId) {
-      if (!ctx) return false
+      const facade = resolveComposerFacade(ctx, sessionId)
+      if (!facade || typeof facade.focus !== 'function') return false
       try {
-        const sessions = ctx.get('sessions')
-        if (!sessions || typeof sessions.scope !== 'function') return false
-        const scoped = sessions.scope(sessionId)
-        if (!scoped || typeof scoped.get !== 'function') return false
-        const conversation = scoped.get('conversation')
-        const input = conversation && conversation.input
-        if (!input || typeof input.for !== 'function') return false
-        const facade = input.for(scoped)
-        if (!facade || typeof facade.focus !== 'function') return false
         facade.focus()
         return true
       } catch {
         return false
       }
+    }
+
+    /**
+     * Move the caret to the very end of the draft after a programmatic replace.
+     * Lexical can leave a freshly populated contenteditable at offset zero when
+     * the editor was not focused while the draft changed; an explicit DOM range
+     * after focus settles that case, and Lexical's selectionchange listener
+     * folds it back into its own selection.
+     */
+    function placeCaretAtEnd(ctx, sessionId) {
+      const facade = resolveComposerFacade(ctx, sessionId)
+      if (!facade || typeof document === 'undefined') return false
+      const editor = facade.editor
+      if (!editor || typeof editor.getRootElement !== 'function') return false
+      const apply = () => {
+        try {
+          const root = editor.getRootElement()
+          if (!root) return
+          root.focus({ preventScroll: true })
+          const selection = window.getSelection()
+          if (!selection) return
+          const range = document.createRange()
+          range.selectNodeContents(root)
+          range.collapse(false)
+          selection.removeAllRanges()
+          selection.addRange(range)
+        } catch {
+          /* leave the editor's own selection untouched */
+        }
+      }
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(apply)
+      else setTimeout(apply, 0)
+      return true
+    }
+
+    /**
+     * Read the input state from the live facade. React selectors can trail the
+     * editor by one keystroke while an overlay has focus; range arithmetic for
+     * a programmatic edit must see the exact current draft, revision, and claim.
+     */
+    function readLiveInputSnapshot(ctx, sessionId) {
+      try {
+        const facade = resolveComposerFacade(ctx, sessionId)
+        const state = facade && facade.state
+        if (state && typeof state.getSnapshot === 'function') {
+          const snapshot = state.getSnapshot()
+          if (snapshot && typeof snapshot === 'object') return snapshot
+        }
+      } catch {
+        /* fall back to the React snapshot */
+      }
+      return null
+    }
+
+    /**
+     * Detect-projection length of the published draft. Chips count as one
+     * character there while the clipboard projection carries their full text,
+     * so command tokens and reference chips have to be folded back.
+     */
+    function detectDraftLength(draft, occurrences, command) {
+      let length = typeof draft === 'string' ? draft.length : 0
+      // CommandChipNode's clipboard projection is the token without its
+      // argument separator; the chip itself occupies one detect character.
+      if (command && typeof command.spelling === 'string') {
+        length -= Math.max(0, command.spelling.length - 1)
+      } else if (command && typeof command.token === 'string') {
+        length -= Math.max(0, command.token.length - 1)
+      }
+      if (Array.isArray(occurrences)) {
+        for (const occurrence of occurrences) {
+          const size = Number(occurrence && occurrence.length)
+          if (Number.isFinite(size) && size > 1) length -= size - 1
+        }
+      }
+      return Math.max(0, length)
+    }
+
+
+    /** Snapshot the model selection shown by the composer, for the optimizer fallback route. */
+    function readComposerModelSelection(ctx, sessionId) {
+      if (!ctx || !sessionId) return null
+      try {
+        const sessions = ctx.get('sessions')
+        if (!sessions || typeof sessions.binding !== 'function') return null
+        const binding = sessions.binding(sessionId)
+        const session = binding && binding.session
+        const projections = session && session.projections
+        if (!projections || typeof projections.faceOf !== 'function') return null
+        const state = projections.faceOf('modelSelection').getSnapshot()
+        const selection = state && (state.next || state.lastUsed)
+        if (!selection || typeof selection.provider !== 'string' || selection.provider === '') return null
+        if (typeof selection.model !== 'string' || selection.model === '') return null
+        return {
+          provider: selection.provider,
+          model: selection.model,
+          ...(typeof selection.reasoningEffort === 'string' && selection.reasoningEffort !== ''
+            ? { reasoningEffort: selection.reasoningEffort }
+            : {}),
+        }
+      } catch {
+        return null
+      }
+    }
+
+
+    /** Phases where the composer is submitting/sending and no edit is safe. */
+    function isFrozenPhase(phase) {
+      return phase === 'adjudicating' || phase === 'submitting' || phase === 'sending'
+    }
+
+    /**
+     * Split the draft around its leading slash-command chip. The chip's
+     * clipboard projection is its token; everything after the token and its
+     * argument separator is the command's argument text.
+     */
+    function splitCommandDraft(draft, claim) {
+      if (!claim || typeof claim.token !== 'string' || claim.token === '') return null
+      const text = typeof draft === 'string' ? draft : ''
+      const token = claim.token
+      const spelling = token.trimEnd()
+      if (spelling === '' || !text.startsWith(spelling)) return null
+      const separator = token.slice(spelling.length)
+      let rest = text.slice(spelling.length)
+      if (separator !== '' && rest.startsWith(separator)) rest = rest.slice(separator.length)
+      return { token, spelling, separator, args: rest }
+    }
+
+    /** Build the semantic draft that keeps a leading command chip. */
+    function commandDraftText(command, args) {
+      return `${command.spelling}${command.separator}${args}`
+    }
+
+    /** Replace the draft while preserving a leading command chip when present. */
+    function replaceDraftPreservingCommand(inputActions, command, text) {
+      if (command) {
+        try {
+          // SessionInput.setDraft accepts the semantic DraftSnapshot shape at
+          // runtime; InputActions types it as string, so keep a fallback for
+          // hosts that reject the richer form.
+          inputActions.setDraft({ text, references: [], command: { token: command.token } })
+          return true
+        } catch {
+          /* fall back to plain text below */
+        }
+      }
+      inputActions.setDraft(text)
+      return true
     }
 
     /**
@@ -802,10 +1040,242 @@ window.__ModuleLoader__.load({
             onFocus: showTip,
             onBlur: hideTip,
             onClick: toggle,
-          }, h(HistoryGlyph, { size: 16, strokeScale: 1.45 }))),
+          }, h(HistoryGlyph, { size: 16 }))),
         tip === false
           ? null
           : h('span', { className: 'phc-tip', role: 'tooltip' }, t(open ? 'composerClose' : 'composerEntry')))
+    }
+
+    /** Map a host error code onto one localized sentence the composer can display. */
+    function optimizeErrorText(error, t) {
+      const code = error && error.code
+      if (code === 'NO_MODEL') return t('optimizeErrorNoModel')
+      if (code === 'NO_ADAPTER' || code === 'LLM_UNAVAILABLE') return t('optimizeErrorUnavailable')
+      if (code === 'INPUT_TOO_LONG') return t('optimizeErrorTooLong')
+      if (code === 'INVALID_OUTPUT') return t('optimizeErrorInvalid')
+      if (code === 'TIMEOUT') return t('optimizeErrorTimeout')
+      if (error && error.name === 'TypeError') return t('optimizeErrorNetwork')
+      const message = error && error.message ? String(error.message) : ''
+      return message === '' ? t('optimizeFailed') : `${t('optimizeFailed')}: ${message}`
+    }
+
+    /**
+     * Wand chip immediately before the prompt-history chip: one click sends
+     * the current draft through the host's prompt optimizer and replaces the
+     * draft with the returned text. It never changes the draft while the
+     * composer is sending, and the request can be repeated at any time.
+     */
+    function ComposerOptimize(props) {
+      const { ctx, sessionId, inputActions, useInput } = props
+      const locale = useLocale(ctx)
+      const t = React.useCallback((key) => translate(locale, key), [locale])
+      const draft = useInput((state) => state.draft)
+      const draftRev = useInput((state) => state.draftRev)
+      const occurrences = useInput((state) => state.occurrences)
+      const phase = useInput((state) => state.phase)
+      const claim = useInput((state) => state.claim)
+      const command = splitCommandDraft(draft, claim)
+      const [status, setStatus] = React.useState('idle')
+      const [notice, setNotice] = React.useState(null)
+      const [tip, setTip] = React.useState(false)
+      const alive = React.useRef(true)
+      const request = React.useRef(null)
+      const tipTimer = React.useRef(null)
+      const noticeTimer = React.useRef(null)
+
+      React.useEffect(() => () => {
+        alive.current = false
+        if (request.current) request.current.abort()
+        if (tipTimer.current) clearTimeout(tipTimer.current)
+        if (noticeTimer.current) clearTimeout(noticeTimer.current)
+      }, [])
+
+      // Editing after a successful replacement retires the check mark and its
+      // toast, so the next click is once again an ordinary optimize action.
+      React.useEffect(() => {
+        if (status !== 'success' || notice === null || notice.kind !== 'success') return
+        if (draft === notice.optimized) return
+        setStatus('idle')
+        setNotice(null)
+      }, [draft, status, notice])
+
+      const showTip = () => {
+        if (notice !== null || status === 'running') return
+        if (tipTimer.current) clearTimeout(tipTimer.current)
+        tipTimer.current = setTimeout(() => setTip(true), 420)
+      }
+      const hideTip = () => {
+        if (tipTimer.current) clearTimeout(tipTimer.current)
+        tipTimer.current = null
+        setTip(false)
+      }
+      const clearNoticeTimer = () => {
+        if (noticeTimer.current) clearTimeout(noticeTimer.current)
+        noticeTimer.current = null
+      }
+      const showNotice = (next) => {
+        setNotice(next)
+        clearNoticeTimer()
+        noticeTimer.current = setTimeout(() => {
+          if (alive.current) {
+            setNotice(null)
+            setStatus('idle')
+          }
+        }, next.kind === 'error' ? 10_000 : 8_000)
+      }
+      const dismissNotice = () => {
+        clearNoticeTimer()
+        setNotice(null)
+        if (status !== 'running') setStatus('idle')
+      }
+      const undo = () => {
+        if (!notice || notice.kind !== 'success') return
+        if (draft !== notice.optimized) return
+        try {
+          if (notice.command) replaceDraftPreservingCommand(inputActions, notice.command, notice.previous)
+          else inputActions.setDraft(notice.previous)
+        } catch {
+          /* the editor rejected the restore; keeping the optimized text is safe */
+        }
+        dismissNotice()
+        focusComposer(ctx, sessionId)
+      }
+
+      const busy = isFrozenPhase(phase) || status === 'running'
+      const sourceText = command !== null ? command.args : (typeof draft === 'string' ? draft : '')
+      const hasText = sourceText.trim() !== ''
+      const tooltip = status === 'running'
+        ? t('optimizeBusy')
+        : !hasText
+          ? command !== null ? t('optimizeEmptyCommand') : t('optimizeEmpty')
+          : t('optimizeEntry')
+
+      const run = async () => {
+        if (busy) return
+        // Read the editor's live draft at click time; the rendered selector can
+        // trail a fast keystroke by one character.
+        const live = readLiveInputSnapshot(ctx, sessionId)
+        const liveDraft = live && typeof live.draft === 'string' ? live.draft : draft
+        const liveDraftRev = live && typeof live.draftRev === 'number' ? live.draftRev : draftRev
+        const liveOccurrences = live && Array.isArray(live.occurrences) ? live.occurrences : occurrences
+        const liveCommand = splitCommandDraft(liveDraft, live ? live.claim : claim)
+        const text = liveCommand !== null ? liveCommand.args : (typeof liveDraft === 'string' ? liveDraft : '')
+        if (text.trim() === '') {
+          showNotice({ kind: 'error', text: liveCommand !== null ? t('optimizeEmptyCommand') : t('optimizeEmpty') })
+          return
+        }
+        if (text.length > 60_000) {
+          showNotice({ kind: 'error', text: t('optimizeErrorTooLong') })
+          return
+        }
+        if (request.current) request.current.abort()
+        const controller = new AbortController()
+        request.current = controller
+        setStatus('running')
+        setNotice(null)
+        hideTip()
+        try {
+          const selection = readComposerModelSelection(ctx, sessionId)
+          const response = await fetch(OPTIMIZE_API, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'application/json' },
+            body: JSON.stringify({ sessionId, text, ...(selection || {}) }),
+            signal: controller.signal,
+          })
+          let body = null
+          try {
+            body = await response.json()
+          } catch {
+            body = null
+          }
+          if (!response.ok || !body || body.ok === false) {
+            const error = new Error((body && body.error) || `HTTP ${response.status}`)
+            error.code = body && body.code
+            throw error
+          }
+          if (!alive.current) return
+          if (typeof body.optimized !== 'string' || body.optimized.trim() === '') {
+            const error = new Error('The optimizer returned no prompt text.')
+            error.code = 'INVALID_OUTPUT'
+            throw error
+          }
+          if (liveCommand !== null) {
+            const nextDraft = commandDraftText(liveCommand, body.optimized)
+            // Replace only the command's argument span so its chip survives
+            // untouched and the caret settles after the rewritten text. A
+            // semantic setDraft would rebuild the chip asynchronously and
+            // leave the caret at the start of the arguments.
+            let replaced = false
+            try {
+              if (typeof inputActions.insertText === 'function') {
+                const end = detectDraftLength(liveDraft, liveOccurrences, liveCommand)
+                const start = 1 + liveCommand.separator.length
+                replaced = inputActions.insertText(body.optimized, { start, end, draftRev: liveDraftRev })
+              }
+            } catch {
+              replaced = false
+            }
+            if (!replaced) replaceDraftPreservingCommand(inputActions, liveCommand, nextDraft)
+            focusComposer(ctx, sessionId)
+            placeCaretAtEnd(ctx, sessionId)
+            setStatus('success')
+            showNotice({ kind: 'success', text: t('optimizeDone'), previous: liveDraft, optimized: nextDraft, command: liveCommand })
+          } else {
+            inputActions.setDraft(body.optimized)
+            focusComposer(ctx, sessionId)
+            placeCaretAtEnd(ctx, sessionId)
+            setStatus('success')
+            showNotice({ kind: 'success', text: t('optimizeDone'), previous: text, optimized: body.optimized, command: null })
+          }
+        } catch (error) {
+          if (!alive.current || (error && error.name === 'AbortError')) return
+          setStatus('error')
+          showNotice({ kind: 'error', text: optimizeErrorText(error, t) })
+        } finally {
+          if (request.current === controller) request.current = null
+        }
+      }
+
+      return h('span', {
+        className: 'phc-seat pho-seat',
+        onMouseEnter: showTip,
+        onMouseLeave: hideTip,
+      },
+        h('button', {
+          type: 'button',
+          className: 'phc-trigger pho-trigger',
+          'data-prompt-optimize-entry': '',
+          'aria-label': t('optimizeEntry'),
+          'aria-busy': status === 'running',
+          disabled: busy,
+          onMouseDown: (event) => { event.preventDefault() },
+          onFocus: showTip,
+          onBlur: hideTip,
+          onClick: run,
+        }, status === 'running'
+          ? h(Spinner, { size: 15 })
+          : status === 'success'
+            ? h(CheckIcon, { size: 16, strokeWidth: 2 })
+            : h(SparkleGlyph, { size: 16 })),
+        tip && notice === null
+          ? h('span', { className: 'phc-tip', role: 'tooltip' }, tooltip)
+          : null,
+        notice === null
+          ? null
+          : h('div', {
+            className: `pho-toast${notice.kind === 'error' ? ' is-error' : ''}`,
+            role: notice.kind === 'error' ? 'alert' : 'status',
+          },
+            h('span', { className: 'pho-toast-text' }, notice.text),
+            notice.kind === 'success'
+              ? h('button', { type: 'button', className: 'pho-toast-action', onClick: undo }, t('optimizeUndo'))
+              : null,
+            h('button', {
+              type: 'button',
+              className: 'pho-toast-close',
+              'aria-label': t('optimizeDismiss'),
+              onClick: dismissNotice,
+            }, '×')))
     }
 
     /** Searchable palette rendered in the composer's overlay anchor, opening upward. */
@@ -817,8 +1287,11 @@ window.__ModuleLoader__.load({
       const open = snapshot.open && snapshot.sessionId === sessionId
       const phase = useInput((state) => state.phase)
       const draft = useInput((state) => state.draft)
+      const draftRev = useInput((state) => state.draftRev)
       const occurrences = useInput((state) => state.occurrences)
-      const busy = phase !== 'plain'
+      const claim = useInput((state) => state.claim)
+      const busy = isFrozenPhase(phase)
+      const command = splitCommandDraft(draft, claim)
       const [query, setQuery] = React.useState('')
       const [data, setData] = React.useState({ status: 'idle', entries: null, error: null })
       const [active, setActive] = React.useState(0)
@@ -853,13 +1326,49 @@ window.__ModuleLoader__.load({
         if (!open) return undefined
         const measure = () => {
           const node = cardRef.current
-          if (!node) return
-          const room = Math.floor(node.getBoundingClientRect().bottom - 12)
-          setMaxHeight(Math.max(PALETTE_MIN_HEIGHT, Math.min(PALETTE_MAX_HEIGHT, room)))
+          // The slot layer between the card and the host anchor is a
+          // display:contents wrapper with a 0x0 rect, so walk to the host's
+          // explicit overlay anchor instead of trusting parentElement. Older
+          // hosts without that attribute still resolve through the first
+          // positioned ancestor.
+          let anchor = node && typeof node.closest === 'function'
+            ? node.closest('[data-composer-overlay]')
+            : null
+          if (!anchor && node) {
+            let candidate = node.parentElement
+            while (candidate && candidate !== document.body) {
+              if (getComputedStyle(candidate).position !== 'static') {
+                anchor = candidate
+                break
+              }
+              candidate = candidate.parentElement
+            }
+            if (!anchor) anchor = node.parentElement
+          }
+          if (!anchor) return
+          // The overlay anchor has zero height at the composer's top edge; all
+          // room above it belongs to the palette. Never force a minimum taller
+          // than that room: an over-tall card would push its search row above
+          // the viewport on a short window.
+          const anchorTop = anchor.getBoundingClientRect().top
+          const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight
+          // Leave the shell's top header untouched: its translucent row paints
+          // above the composer layer and would cover the palette's search row.
+          const shellHeader = document.querySelector('header')
+          const headerBottom = shellHeader ? shellHeader.getBoundingClientRect().bottom : 0
+          const topInset = Math.max(PALETTE_VIEWPORT_GAP, Math.floor(headerBottom) + 8)
+          const room = Math.floor(anchorTop - topInset)
+          const viewportRoom = Math.floor(viewportHeight - topInset - PALETTE_VIEWPORT_GAP)
+          setMaxHeight(Math.max(0, Math.min(PALETTE_MAX_HEIGHT, room, viewportRoom)))
         }
         measure()
         window.addEventListener('resize', measure)
-        return () => window.removeEventListener('resize', measure)
+        const visualViewport = window.visualViewport
+        if (visualViewport) visualViewport.addEventListener('resize', measure)
+        return () => {
+          window.removeEventListener('resize', measure)
+          if (visualViewport) visualViewport.removeEventListener('resize', measure)
+        }
       }, [open])
 
       React.useEffect(() => {
@@ -929,17 +1438,54 @@ window.__ModuleLoader__.load({
 
       const applyEntry = (entry) => {
         if (!entry || busy || !inputActions) return
-        const blankDraft = (draft === undefined || draft === '') && (occurrences === undefined || occurrences.length === 0)
+        // Read the editor's own current draft: a selector can trail keyboard
+        // input by one keystroke, and a stale range would split the prompt.
+        const live = readLiveInputSnapshot(ctx, sessionId)
+        const liveDraft = live && typeof live.draft === 'string' ? live.draft : draft
+        const liveDraftRev = live && typeof live.draftRev === 'number' ? live.draftRev : draftRev
+        const liveOccurrences = live && Array.isArray(live.occurrences) ? live.occurrences : occurrences
+        const liveCommand = splitCommandDraft(liveDraft, live ? live.claim : claim)
+        const blankDraft = (liveDraft === undefined || liveDraft === '') && (liveOccurrences === undefined || liveOccurrences.length === 0)
+        // A leading slash-command chip stays in place; its existing argument
+        // text is kept and the prompt is appended after it. Insert into the
+        // live editor instead of rebuilding the semantic draft so the command
+        // chip is not re-created (which would move the caret to its start).
+        if (liveCommand !== null) {
+          let extra = entry.text
+          if (liveCommand.args !== '' && !/\s$/.test(liveCommand.args)) extra = ` ${extra}`
+          else if (liveCommand.args === '' && liveCommand.separator === '') extra = ` ${extra}`
+          let applied = false
+          try {
+            if (typeof inputActions.insertText === 'function') {
+              const end = detectDraftLength(liveDraft, liveOccurrences, liveCommand)
+              applied = inputActions.insertText(extra, { start: end, end, draftRev: liveDraftRev })
+            }
+            if (!applied) {
+              replaceDraftPreservingCommand(inputActions, liveCommand, commandDraftText(liveCommand, liveCommand.args + extra))
+              applied = true
+            }
+          } catch {
+            applied = false
+          }
+          if (!applied) {
+            setApplyError(t('composerInsertFailed'))
+            return
+          }
+          seat.close()
+          if (!focus(sessionId)) seat.focusTrigger()
+          placeCaretAtEnd(ctx, sessionId)
+          return
+        }
         let text = entry.text
         if (!blankDraft) {
           // Pasting at the caret must not glue two prompts together: pad the
           // insertion when the neighbouring characters are not whitespace.
           // Reference chips shift the projection, so the check stays off then.
           const span = snapshot.span
-          const clean = typeof draft === 'string' && (occurrences === undefined || occurrences.length === 0)
+          const clean = typeof liveDraft === 'string' && (liveOccurrences === undefined || liveOccurrences.length === 0)
           if (clean && span && typeof span.start === 'number') {
-            const before = draft.slice(0, span.start)
-            const after = draft.slice(span.start)
+            const before = liveDraft.slice(0, span.start)
+            const after = liveDraft.slice(span.start)
             if (before !== '' && !/\s$/.test(before)) text = ` ${text}`
             if (after !== '' && !/^\s/.test(after)) text = `${text} `
           }
@@ -963,6 +1509,7 @@ window.__ModuleLoader__.load({
         }
         seat.close()
         if (!focus(sessionId)) seat.focusTrigger()
+        if (blankDraft) placeCaretAtEnd(ctx, sessionId)
       }
 
       const onKeyDown = (event) => {
@@ -1102,17 +1649,19 @@ window.__ModuleLoader__.load({
           h('button', { type: 'button', className: 'phc-retry', onClick: () => setApplyError(null) }, t('composerDismiss')))
         : null,
       body,
-      h('div', { className: 'phc-foot' },
-        h('span', { className: 'phc-foot-hint' }, busy ? t('composerBusy') : t('composerHint')),
-        h('button', {
-          type: 'button',
-          className: 'phc-view-all',
-          onMouseDown: (event) => { event.preventDefault() },
-          onClick: () => {
-            seat.close()
-            openHistoryPanel()
-          },
-        }, t('composerViewAll'))))
+      maxHeight > PALETTE_COMPACT_HEIGHT
+        ? h('div', { className: 'phc-foot' },
+          h('span', { className: 'phc-foot-hint' }, busy ? t('composerBusy') : command !== null ? t('composerHintCommand') : t('composerHint')),
+          h('button', {
+            type: 'button',
+            className: 'phc-view-all',
+            onMouseDown: (event) => { event.preventDefault() },
+            onClick: () => {
+              seat.close()
+              openHistoryPanel()
+            },
+          }, t('composerViewAll')))
+        : null)
     }
 
     function installStyles() {
@@ -1266,12 +1815,44 @@ window.__ModuleLoader__.load({
   pointer-events: none; transform: translateX(-50%);
 }
 
+/* ---- composer prompt optimizer chip ------------------------------------ */
+.pho-trigger[disabled] { opacity: .45; cursor: default; }
+@media (hover: hover) {
+  .pho-trigger[disabled]:hover { background: transparent; color: var(--dsw-alias-label-secondary); }
+}
+.pho-toast {
+  position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 8;
+  display: flex; align-items: center; gap: 6px;
+  width: 260px; max-width: calc(100vw - 32px); padding: 6px 8px; box-sizing: border-box;
+  border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 8px;
+  background: var(--dsw-alias-bg-overlay, var(--dsw-specific-menu, var(--dsw-alias-bg-layer-1)));
+  color: var(--dsw-alias-label-primary);
+  box-shadow: var(--dsw-elevation-prominent);
+  font-size: 11px; line-height: 16px; white-space: pre-wrap;
+}
+.pho-toast.is-error { border-color: var(--dsw-alias-state-error-primary); }
+.pho-toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pho-toast-action {
+  flex: none; padding: 0; border: 0; background: transparent;
+  color: var(--dsw-alias-brand-primary); font: inherit; font-size: 11px; line-height: 16px;
+  cursor: pointer;
+}
+.pho-toast-action:hover { text-decoration: underline; }
+.pho-toast-close {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--dsw-alias-label-tertiary);
+  font: inherit; font-size: 13px; line-height: 16px; cursor: pointer;
+}
+.pho-toast-close:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+
 /* ---- composer palette (rendered in the composer's overlay anchor) -------- */
 .phc-card {
   position: absolute; left: 0; right: 0; bottom: calc(100% + 4px);
   box-sizing: border-box; z-index: 100;
   display: flex; flex-direction: column;
   min-width: min(260px, 100%); max-width: 100%;
+  max-height: calc(100dvh - 24px);
   padding: 4px;
   border: 0; border-radius: var(--dsw-radius-lg);
   background: var(--dsw-specific-menu, var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1)));
@@ -1421,6 +2002,10 @@ window.__ModuleLoader__.load({
             }
           },
         }
+        ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
+          name: 'conversation.input.right', id: `${PANEL}-optimize`, order: 39,
+          label: () => translate(normalizeLocale(ctx.locale.getSnapshot().active), 'optimizeEntry'),
+        }, (props) => h(ComposerOptimize, { ...props, ctx })))
         ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
           name: 'conversation.input.right', id: PANEL, order: 40, label,
           inject: () => composerFace,
