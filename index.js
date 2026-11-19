@@ -1,5 +1,5 @@
 /**
- * Prompt history — Host half.
+ * Prompt Manage — Host half.
  *
  * Builds one read-only index of the prompts the user typed across every
  * conversation. The index is derived from the durable session log: each
@@ -25,16 +25,21 @@ export const name = 'prompt-history'
 export const inject = ['webServer', 'connection']
 
 const ROUTE = '/api/prompt-history'
+/** Serve a cached payload immediately for this long after its last scan. */
 const CACHE_TTL_MS = 3_000
+/** Between the TTL and this age, answer from cache and refresh in the background. */
+const CACHE_MAX_STALE_MS = 30_000
 const MAX_SESSIONS = 2_000
-const MAX_PROMPTS = 5_000
+const MAX_PROMPTS = 10_000
 const MAX_PROMPTS_PER_SESSION = 1_000
 const MAX_TEXT_LENGTH = 50_000
 const MAX_TITLE_LENGTH = 160
 /** Bound the newest prompts kept per session before building the global response. */
 const MAX_SESSION_TEXT_CHARS = 300_000
 /** Keep one response well below a multi-megabyte string; the newest prompts win the budget. */
-const MAX_RESPONSE_TEXT_CHARS = 2_000_000
+const MAX_RESPONSE_TEXT_CHARS = 4_000_000
+/** Bound the parsed per-session cache so a long-lived process cannot grow without limit. */
+const MAX_SESSION_CACHE_CHARS = 48 * 1024 * 1024
 
 /** Messages a feature injects under a user source but did not type; the attachment marker has no prompt text of its own. */
 const SYNTHETIC_USER_TEXTS = new Set([
@@ -52,6 +57,37 @@ function collapseWhitespace(text) {
 function shortText(text, limit) {
   const chars = Array.from(collapseWhitespace(text))
   return chars.length > limit ? `${chars.slice(0, Math.max(0, limit - 1)).join('')}…` : chars.join('')
+}
+
+/** Stable 32-bit FNV-1a hash; used only to tell whether the payload changed. */
+function hashText(hash, value) {
+  const text = String(value || '')
+  let mixed = hash
+  for (let index = 0; index < text.length; index += 1) {
+    mixed ^= text.charCodeAt(index)
+    mixed = Math.imul(mixed, 16777619)
+  }
+  return mixed >>> 0
+}
+
+/** One revision string for the complete visible prompt index. */
+function revisionOf(entries, meta) {
+  let hash = 2166136261
+  for (const entry of entries) {
+    hash = hashText(hash, entry.id)
+    hash = hashText(hash, entry.time)
+    hash = hashText(hash, entry.project)
+    hash = hashText(hash, entry.projectPath)
+    hash = hashText(hash, entry.sessionTitle)
+    hash = hashText(hash, entry.text)
+    hash = hashText(hash, entry.truncated ? '1' : '0')
+  }
+  if (meta && typeof meta === 'object') {
+    for (const key of ['truncated', 'sessionsTruncated', 'failedSessions', 'sessionsScanned', 'sessionsWithPrompts', 'projectCount']) {
+      hash = hashText(hash, String(meta[key]))
+    }
+  }
+  return `r${hash >>> 0}`
 }
 
 function basename(path) {
@@ -176,12 +212,13 @@ async function mapLimit(items, limit, worker) {
   return results
 }
 
-function jsonResponse(status, body) {
+function jsonResponse(status, body, extraHeaders) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
+      ...(extraHeaders && typeof extraHeaders === 'object' ? extraHeaders : {}),
     },
   })
 }
@@ -199,11 +236,45 @@ function errorMessage(error) {
  */
 export function createPromptIndex(ctx) {
   const sessionCache = new Map()
+  let sessionCacheChars = 0
   let lastPayload = null
   let lastScanAt = 0
   let inflight = null
+  let warmupRetry = null
   let persistenceIdentity
   const lifetime = new AbortController()
+
+  /**
+   * Session cache: insertion order doubles as LRU order. The character budget
+   * matters because one session can hold up to 300k characters, so an
+   * unbounded map could retain hundreds of megabytes on a long-lived host.
+   */
+  function dropCachedSession(sessionId) {
+    const cached = sessionCache.get(sessionId)
+    if (cached === undefined) return
+    sessionCache.delete(sessionId)
+    sessionCacheChars -= Number(cached.chars) || 0
+    if (sessionCacheChars < 0) sessionCacheChars = 0
+  }
+
+  function touchCachedSession(sessionId) {
+    const cached = sessionCache.get(sessionId)
+    if (cached === undefined) return undefined
+    sessionCache.delete(sessionId)
+    sessionCache.set(sessionId, cached)
+    return cached
+  }
+
+  function storeCachedSession(sessionId, cached) {
+    dropCachedSession(sessionId)
+    sessionCache.set(sessionId, cached)
+    sessionCacheChars += Number(cached.chars) || 0
+    while (sessionCacheChars > MAX_SESSION_CACHE_CHARS) {
+      const oldest = sessionCache.keys().next().value
+      if (oldest === undefined || oldest === sessionId) break
+      dropCachedSession(oldest)
+    }
+  }
 
   async function readRevisions(persistence, signal) {
     const revisions = new Map()
@@ -294,15 +365,20 @@ export function createPromptIndex(ctx) {
     const header = record.header
     const snapshot = await readSessionSnapshot(query, header.id, signal)
     const extracted = extractPrompts(snapshot.events, snapshot.inheritedEventCount)
+    const prompts = limitSessionPrompts(extracted.prompts)
+    let chars = 256
+    for (const prompt of prompts) chars += prompt.text.length + 64
     return {
       sessionId: header.id,
       sessionTitle: extracted.title,
       projectPath: typeof header.cwd === 'string' ? header.cwd : '',
-      prompts: limitSessionPrompts(extracted.prompts),
+      prompts,
+      chars,
     }
   }
 
   async function scan() {
+    const startedAt = Date.now()
     const query = ctx.get('sessionQuery')
     const canRead = query && typeof query.listSessions === 'function'
       && (typeof query.observeSession === 'function' || typeof query.readSession === 'function')
@@ -329,6 +405,8 @@ export function createPromptIndex(ctx) {
     const identity = persistence && typeof persistence.identity === 'symbol' ? persistence.identity : null
     if (persistenceIdentity !== identity) {
       sessionCache.clear()
+      sessionCacheChars = 0
+      lastPayload = null
       persistenceIdentity = identity
     }
 
@@ -338,8 +416,8 @@ export function createPromptIndex(ctx) {
     ])
 
     const activeIds = new Set(roots.map((record) => record.header.id))
-    for (const id of sessionCache.keys()) {
-      if (!activeIds.has(id)) sessionCache.delete(id)
+    for (const id of [...sessionCache.keys()]) {
+      if (!activeIds.has(id)) dropCachedSession(id)
     }
 
     let failed = 0
@@ -347,18 +425,21 @@ export function createPromptIndex(ctx) {
       if (lifetime.signal.aborted) throw abortError()
       const id = record.header.id
       const revision = revisions.get(id) ?? null
-      const cached = sessionCache.get(id)
-      if (cached && revision !== null && cached.revision === revision) {
-        return { record, value: cached.value }
-      }
+      let cached = touchCachedSession(id)
+      const cacheMatches = cached !== undefined && (
+        (revision !== null && cached.revision === revision)
+        || (revision === null && cached.revision === null && Date.now() - cached.at < 10_000)
+      )
+      if (cacheMatches) return { record, value: cached.value }
       try {
         const value = await loadSession(query, record, lifetime.signal)
-        sessionCache.set(id, { revision, value })
+        storeCachedSession(id, { revision, value, chars: value.chars, at: Date.now() })
         return { record, value }
       } catch (error) {
         if (error && error.name === 'AbortError') throw error
         failed += 1
-        if (cached) return { record, value: cached.value }
+        const fallback = cached || touchCachedSession(id)
+        if (fallback) return { record, value: fallback.value }
         return { record, value: null }
       }
     })
@@ -415,6 +496,15 @@ export function createPromptIndex(ctx) {
     return {
       ok: true,
       generatedAt: Date.now(),
+      revision: revisionOf(limited, {
+        truncated,
+        sessionsTruncated,
+        failedSessions: failed,
+        sessionsScanned: roots.length,
+        sessionsWithPrompts,
+        projectCount: projects.size,
+      }),
+      scanMs: Math.max(0, Date.now() - startedAt),
       total: limited.length,
       truncated,
       sessionsTruncated,
@@ -426,9 +516,7 @@ export function createPromptIndex(ctx) {
     }
   }
 
-  async function getPayload(force) {
-    const now = Date.now()
-    if (!force && lastPayload !== null && now - lastScanAt < CACHE_TTL_MS) return lastPayload
+  function startScan() {
     if (inflight !== null) return inflight
     inflight = scan()
       .then((payload) => {
@@ -440,6 +528,44 @@ export function createPromptIndex(ctx) {
         inflight = null
       })
     return inflight
+  }
+
+  /**
+   * Stale-while-revalidate: inside the TTL the payload is fresh; after it the
+   * previous payload is served while one background scan refreshes the cache.
+   * An explicit ?refresh=1 or an expired max-stale window waits for the scan.
+   */
+  async function getPayload(force) {
+    const now = Date.now()
+    if (!force && lastPayload !== null) {
+      const age = now - lastScanAt
+      if (age < CACHE_TTL_MS) return lastPayload
+      if (age < CACHE_MAX_STALE_MS) {
+        if (inflight === null) void startScan().catch(() => {})
+        return lastPayload
+      }
+    }
+    return startScan()
+  }
+
+  /** Warm the cache at activation so the first palette click is instant. */
+  async function warmup(attempt = 0) {
+    if (lastPayload !== null) return lastPayload
+    if (inflight !== null) return inflight
+    try {
+      return await startScan()
+    } catch {
+      /* Session services can mount a beat after this plugin; retry briefly. */
+      if (attempt < 2 && !lifetime.signal.aborted) {
+        if (warmupRetry !== null) clearTimeout(warmupRetry)
+        warmupRetry = setTimeout(() => {
+          warmupRetry = null
+          void warmup(attempt + 1)
+        }, 1_500 * (attempt + 1))
+        if (warmupRetry && typeof warmupRetry.unref === 'function') warmupRetry.unref()
+      }
+      return null
+    }
   }
 
   async function handle(request) {
@@ -461,21 +587,44 @@ export function createPromptIndex(ctx) {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response('Method Not Allowed', { status: 405, headers: { allow: 'GET, HEAD' } })
     }
-    if (request.method === 'HEAD') {
-      return new Response(null, {
-        status: 200,
-        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-      })
-    }
     let url
     try {
       url = new URL(request.url)
     } catch {
       return jsonResponse(400, { ok: false, error: 'Invalid request URL.' })
     }
+    const headerValue = request.headers && typeof request.headers.get === 'function'
+      ? request.headers.get('if-none-match')
+      : (request.headers && (request.headers['if-none-match'] || request.headers['If-None-Match'])) || null
+    const matchesEtag = (etag) => etag !== null && headerValue !== null
+      && headerValue.split(',').some((value) => value.trim() === etag)
+
+    // HEAD must stay cheap: answer from the warm payload when possible instead
+    // of starting a full session scan just to echo headers.
+    if (request.method === 'HEAD') {
+      const cached = lastPayload
+      if (cached === null || typeof cached.revision !== 'string') {
+        return new Response(null, {
+          status: 200,
+          headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+        })
+      }
+      const etag = `"${cached.revision}"`
+      if (matchesEtag(etag)) return new Response(null, { status: 304, headers: { etag, 'cache-control': 'no-store' } })
+      return new Response(null, {
+        status: 200,
+        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', etag },
+      })
+    }
+
     try {
-      const payload = await getPayload(url.searchParams.get('refresh') === '1')
-      return jsonResponse(200, payload)
+      const force = url.searchParams.get('refresh') === '1'
+      const payload = await getPayload(force)
+      const etag = payload && typeof payload.revision === 'string' ? `"${payload.revision}"` : null
+      if (!force && matchesEtag(etag)) {
+        return new Response(null, { status: 304, headers: { etag, 'cache-control': 'no-store' } })
+      }
+      return jsonResponse(200, payload, etag === null ? undefined : { etag })
     } catch (error) {
       const status = error && Number.isInteger(error.statusCode) ? error.statusCode : 500
       return jsonResponse(status, { ok: false, error: errorMessage(error) })
@@ -484,12 +633,17 @@ export function createPromptIndex(ctx) {
 
   function dispose() {
     lifetime.abort()
+    if (warmupRetry !== null) {
+      clearTimeout(warmupRetry)
+      warmupRetry = null
+    }
     sessionCache.clear()
+    sessionCacheChars = 0
     lastPayload = null
     inflight = null
   }
 
-  return { handle, getPayload, dispose }
+  return { handle, getPayload, warmup, dispose }
 }
 
 export function apply(ctx) {
@@ -506,7 +660,12 @@ export function apply(ctx) {
       path: OPTIMIZE_ROUTE,
       handler: (req, res) => optimizer.handle(req, res),
     })
+    // Build the index in the background shortly after activation, so the
+    // first palette click does not pay for reading every session log while
+    // still letting the profile finish mounting its session services.
+    const warmupTimer = setTimeout(() => { void index.warmup() }, 750)
     return () => {
+      clearTimeout(warmupTimer)
       disposeOptimizeRoute()
       disposeIndexRoute()
       index.dispose()

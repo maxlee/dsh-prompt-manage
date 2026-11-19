@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.4.0
+
+Released on 2026-11-19.
+
+- Rename the visible product to **Prompt Manage** / **提示词管理** everywhere the sidebar and page title show it; the package id stays `dsh-prompt-manage`.
+- Make the history index scale to thousands of prompts: warm the index at activation, keep parsed per-session results in a bounded LRU cache, revalidate unchanged payloads with a stable ETag, and serve stale-while-revalidate between scans. The response budget rises to 10,000 prompts / 4,000,000 characters.
+- Speed up search by preparing lowercased prompt and metadata text once per index, replacing the per-keystroke character loop with native `indexOf` fuzzy matching over the full prompt, and deferring the filter pass so typing stays responsive with thousands of long prompts.
+- Search now explicitly treats whitespace-separated words as an AND query: `react 登录` matches only prompts containing both terms, in any order, across prompt text, project, and session title; matching terms are highlighted when they fall inside the preview window.
+- Render the sidebar list in 100-row pages with a **Show more** button and `content-visibility` for off-screen rows; the composer palette stays capped at 60 results.
+
 ## 0.3.2
 
 Released on 2026-11-19.

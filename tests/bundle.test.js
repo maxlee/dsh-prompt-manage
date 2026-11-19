@@ -14,6 +14,16 @@ test('client bundle id and Cordis patch row match the package name', () => {
   assert.match(read('cordis.patch.yml'), new RegExp(`name: '${escape(pkg.name)}'`))
 })
 
+test('the visible product name is Prompt Manage / 提示词管理 in both locales', () => {
+  const client = read('client.js')
+  assert.match(client, /navLabel: 'Prompt Manage'/)
+  assert.match(client, /navLabel: '提示词管理'/)
+  assert.match(client, /title: 'Prompt Manage'/)
+  assert.match(client, /title: '提示词管理'/)
+  assert.equal(JSON.parse(read('locale/en.json')).meta.title, 'Prompt Manage')
+  assert.equal(JSON.parse(read('locale/zh.json')).meta.title, '提示词管理')
+})
+
 test('the package manifest points at files that exist', () => {
   const pkg = JSON.parse(read('package.json'))
   assert.equal(pkg.dsh.bundle.patch, './cordis.patch.yml')
@@ -51,6 +61,20 @@ test('composer UI text exists in every locale dictionary', () => {
   assert.match(source, /function splitCommandDraft/)
   assert.match(source, /function replaceDraftPreservingCommand/)
   assert.match(source, /function isFrozenPhase/)
+})
+
+test('the scale guardrails stay wired: warmed index, ETag, prepared search, paged rows', () => {
+  const host = read('index.js')
+  const client = read('client.js')
+  assert.match(host, /const MAX_PROMPTS = 10_000/)
+  assert.match(host, /const MAX_SESSION_CACHE_CHARS = 48 \* 1024 \* 1024/)
+  assert.match(host, /function revisionOf\(entries, meta\)/)
+  assert.match(host, /async function warmup\(/)
+  assert.match(host, /index\.warmup\(\)/)
+  assert.match(client, /function prepareSearchEntries\(entries\)/)
+  assert.match(client, /function searchPrepared\(prepared, query\)/)
+  assert.match(client, /const PROMPT_PAGE_SIZE = 100/)
+  assert.match(client, /React\.useDeferredValue\(query\)/)
 })
 
 test('the composer palette shrinks into the room above the composer', () => {

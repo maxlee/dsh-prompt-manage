@@ -1,8 +1,8 @@
 {
   "name": "dsh-prompt-manage",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": false,
-  "description": "Reuse the prompts you have typed across DeepSeek Harness conversations, and rewrite a raw draft with the current model through an editable prompt-optimizer system prompt: a searchable palette beside the model selector in the composer, a magic-wand optimizer button, and a sidebar page with the full history.",
+  "description": "Prompt Manage — reuse the prompts you have typed across DeepSeek Harness conversations, and rewrite a raw draft with the current model through an editable prompt-optimizer system prompt: a searchable palette beside the model selector in the composer, a magic-wand optimizer button, and a searchable sidebar page over the full history.",
   "type": "module",
   "main": "index.js",
   "exports": {

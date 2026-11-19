@@ -1,4 +1,4 @@
-// Prompt history — browser half.
+// Prompt Manage — browser half.
 // A left-sidebar entry that lists every prompt the user typed across all DSH
 // conversations, with fuzzy search, project/session/time labels, and one-click
 // copy. The Host half serves the index at `/api/prompt-history`.
@@ -15,18 +15,19 @@ window.__ModuleLoader__.load({
 
     const DICT = {
       en: {
-        navLabel: 'Prompt history',
-        title: 'Prompt history',
+        navLabel: 'Prompt Manage',
+        title: 'Prompt Manage',
         subtitle: 'Every prompt you have typed across all workspaces — {total} in total',
         subtitleLoading: 'Reading local session records…',
         subtitleError: 'The local session index is unavailable',
-        searchPlaceholder: 'Search prompts, projects, or sessions…',
-        searchLabel: 'Search prompt history',
+        searchPlaceholder: 'Search prompts, projects, or sessions — space separates words…',
+        searchLabel: 'Search prompts',
         clearSearch: 'Clear search',
         refresh: 'Refresh',
         refreshing: 'Refreshing',
         countAll: '{total} prompts',
         countFiltered: '{shown} of {total} match',
+        showMore: 'Show more ({remaining} remaining)',
         copy: 'Copy',
         copied: 'Copied',
         copyFailed: 'Copy failed',
@@ -38,10 +39,10 @@ window.__ModuleLoader__.load({
         emptyHint: 'Send your first message in any conversation and it will show up here.',
         noMatchTitle: 'No matching prompts',
         noMatchHint: 'Try another keyword, or search a project or session name.',
-        errorTitle: 'Could not read prompt history',
+        errorTitle: 'Could not read prompts',
         errorHint: 'Session records are temporarily unavailable. Try again.',
         retry: 'Retry',
-        loading: 'Loading prompt history',
+        loading: 'Loading prompts',
         footer: 'Reads local DSH session records only. Nothing is uploaded.',
         footerStats: 'Scanned {sessions} sessions · {projects} projects',
         footerFailed: '{failed} sessions could not be read',
@@ -50,18 +51,18 @@ window.__ModuleLoader__.load({
         fuzzyMatch: 'Fuzzy match',
         fuzzyHint: 'Matched by a loose character sequence, not a contiguous phrase.',
         truncated: 'Long prompt — display truncated',
-        composerEntry: 'Insert a prompt from history',
-        composerClose: 'Close prompt history',
-        composerSearchPlaceholder: 'Search prompts from every conversation…',
-        composerSearchLabel: 'Search prompt history',
+        composerEntry: 'Insert a saved prompt',
+        composerClose: 'Close prompt manager',
+        composerSearchPlaceholder: 'Search prompts — space separates words…',
+        composerSearchLabel: 'Search prompts',
         composerApply: 'Apply',
         composerLoading: 'Reading local session records…',
-        composerError: 'Prompt history is unavailable right now.',
+        composerError: 'Prompt manager is unavailable right now.',
         composerEmpty: 'No prompts yet. Send a message in any conversation to build history.',
         composerNoMatch: 'No matching prompts.',
         composerInsertFailed: 'Could not insert into the composer. Try again.',
         composerBusy: 'Wait for the current message to finish',
-        composerViewAll: 'View all history',
+        composerViewAll: 'View all prompts',
         composerCount: '{total} prompts',
         composerMatches: '{shown} of {total}',
         composerHint: 'Inserted at the caret',
@@ -83,18 +84,19 @@ window.__ModuleLoader__.load({
         optimizeDismiss: 'Dismiss',
       },
       zh: {
-        navLabel: '提示词历史',
-        title: '提示词历史',
+        navLabel: '提示词管理',
+        title: '提示词管理',
         subtitle: '跨全部工作区，共 {total} 条你输入过的提示词',
         subtitleLoading: '正在读取本机会话记录…',
         subtitleError: '本机会话索引暂时不可用',
-        searchPlaceholder: '搜索提示词、项目或会话…',
-        searchLabel: '搜索提示词历史',
+        searchPlaceholder: '搜索提示词、项目或会话（空格分隔多个词）…',
+        searchLabel: '搜索提示词',
         clearSearch: '清除搜索',
         refresh: '刷新',
         refreshing: '刷新中',
         countAll: '共 {total} 条',
         countFiltered: '匹配 {shown} / {total} 条',
+        showMore: '显示更多（剩余 {remaining} 条）',
         copy: '复制',
         copied: '已复制',
         copyFailed: '复制失败',
@@ -106,10 +108,10 @@ window.__ModuleLoader__.load({
         emptyHint: '在任意对话中发送第一条消息后，这里会自动出现。',
         noMatchTitle: '没有匹配的提示词',
         noMatchHint: '换个关键词，或搜索项目名和会话名试试。',
-        errorTitle: '读取提示词历史失败',
+        errorTitle: '读取提示词失败',
         errorHint: '会话记录暂时不可用，请稍后重试。',
         retry: '重试',
-        loading: '正在加载提示词历史',
+        loading: '正在加载提示词',
         footer: '仅索引本机 DSH 会话记录，不会上传任何内容。',
         footerStats: '已扫描 {sessions} 个会话 · {projects} 个项目',
         footerFailed: '{failed} 个会话读取失败',
@@ -118,18 +120,18 @@ window.__ModuleLoader__.load({
         fuzzyMatch: '模糊匹配',
         fuzzyHint: '按非连续字符顺序匹配。',
         truncated: '内容过长，已截断',
-        composerEntry: '从历史中插入提示词',
-        composerClose: '关闭提示词历史',
-        composerSearchPlaceholder: '搜索所有对话里的提示词…',
-        composerSearchLabel: '搜索历史提示词',
+        composerEntry: '插入已保存的提示词',
+        composerClose: '关闭提示词管理',
+        composerSearchPlaceholder: '搜索所有对话里的提示词（空格分隔多个词）…',
+        composerSearchLabel: '搜索提示词',
         composerApply: '应用',
         composerLoading: '正在读取本机会话记录…',
-        composerError: '提示词历史暂时不可用。',
+        composerError: '提示词管理暂时不可用。',
         composerEmpty: '还没有历史提示词，在任意对话中发送消息后这里就会出现。',
         composerNoMatch: '没有匹配的提示词。',
         composerInsertFailed: '插入输入框失败，请重试。',
         composerBusy: '等待当前消息发送完成',
-        composerViewAll: '查看全部历史',
+        composerViewAll: '查看全部提示词',
         composerCount: '共 {total} 条',
         composerMatches: '匹配 {shown} / {total}',
         composerHint: '插入到光标处',
@@ -213,11 +215,36 @@ window.__ModuleLoader__.load({
       })
     }
 
+    /**
+     * Search performance: every entry is lowercased once, when it arrives, and
+     * reused for every keystroke. The previous version rebuilt a lowercased copy
+     * of every prompt on every query; with thousands of long prompts that was
+     * the dominant cost. Fuzzy matching walks the text with native indexOf,
+     * which is considerably faster than a character-by-character JS loop.
+     */
+    /** The page renders in chunks so a five-digit result set never builds a wall of DOM at once. */
+    const PROMPT_PAGE_SIZE = 100
+
     function normalizeSearch(value) {
       return String(value || '').toLocaleLowerCase().trim()
     }
 
-    /** A contiguous match scores highest; a subsequence match keeps short queries useful for fuzzy lookup. */
+    /**
+     * Split a free-form query on whitespace. Every returned term must match the
+     * same entry (AND semantics): "react 登录" finds prompts containing both
+     * "react" and "登录", in any order, across prompt text, project, or title.
+     */
+    function searchTerms(query) {
+      const text = normalizeSearch(query)
+      if (text === '') return []
+      return text.split(/\s+/).filter(Boolean)
+    }
+
+    /**
+     * A contiguous match scores highest; a subsequence match keeps short
+     * queries useful for fuzzy lookup. Native indexOf walks the text faster
+     * than a character-by-character JavaScript loop.
+     */
     function scoreOne(text, term) {
       if (term === '') return 0
       const direct = text.indexOf(term)
@@ -227,48 +254,77 @@ window.__ModuleLoader__.load({
         if (direct === 0 || /[\s\-_/.,;:()[\]{}]/.test(text.charAt(direct - 1))) score += 120
         return score + Math.min(term.length, 40) * 4
       }
-      let queryIndex = 0
+      let from = 0
       let lastMatch = -1
       let gapCount = 0
       let run = 0
       let bestRun = 0
-      for (let index = 0; index < text.length && queryIndex < term.length; index += 1) {
-        if (text.charAt(index) === term.charAt(queryIndex)) {
-          if (lastMatch >= 0) gapCount += index - lastMatch - 1
-          lastMatch = index
-          run += 1
-          bestRun = Math.max(bestRun, run)
-          queryIndex += 1
-        } else if (lastMatch >= 0) {
-          run = 0
-        }
+      for (let index = 0; index < term.length; index += 1) {
+        const hit = text.indexOf(term.charAt(index), from)
+        if (hit < 0) return -1
+        if (lastMatch >= 0) gapCount += hit - lastMatch - 1
+        run = lastMatch >= 0 && hit === lastMatch + 1 ? run + 1 : 1
+        if (run > bestRun) bestRun = run
+        lastMatch = hit
+        from = hit + 1
       }
-      if (queryIndex < term.length) return -1
       return Math.max(0, 380 - gapCount * 3) + bestRun * 8
     }
 
-    function searchEntries(entries, query) {
-      const terms = normalizeSearch(query).split(/\s+/).filter(Boolean)
-      if (terms.length === 0) return entries
-      const scored = []
-      for (const entry of entries) {
+    const preparedSearchCache = typeof WeakMap === 'function' ? new WeakMap() : null
+    const preparedEntryCache = typeof WeakMap === 'function' ? new WeakMap() : null
+
+    /** Precompute the lowercased text/meta view once per fetched entries array. */
+    function prepareSearchEntries(entries) {
+      if (!Array.isArray(entries) || entries.length === 0) return []
+      if (preparedSearchCache !== null) {
+        const cached = preparedSearchCache.get(entries)
+        if (cached !== undefined && cached.length === entries.length) return cached
+      }
+      const prepared = entries.map((entry) => {
         const text = normalizeSearch(entry.text)
         const meta = normalizeSearch(`${entry.project || ''} ${entry.sessionTitle || ''}`)
+        const row = { entry, text, matchText: `${text}\n${meta}`, meta }
+        if (preparedEntryCache !== null) preparedEntryCache.set(entry, row)
+        return row
+      })
+      if (preparedSearchCache !== null) preparedSearchCache.set(entries, prepared)
+      return prepared
+    }
+
+    function preparedEntryFor(entry) {
+      return preparedEntryCache !== null ? preparedEntryCache.get(entry) : undefined
+    }
+
+    function searchPrepared(prepared, query) {
+      const terms = searchTerms(query)
+      if (terms.length === 0) return prepared.map((row) => row.entry)
+      const phrase = terms.join(' ')
+      const scored = []
+      for (const row of prepared) {
         let total = 0
         let matched = true
         for (const term of terms) {
-          const textScore = scoreOne(text, term)
-          const metaScore = scoreOne(meta, term)
+          const textScore = scoreOne(row.text, term)
+          const metaScore = scoreOne(row.meta, term)
           if (textScore < 0 && metaScore < 0) {
             matched = false
             break
           }
           total += Math.max(0, textScore) + Math.max(0, metaScore) * 0.35
         }
-        if (matched) scored.push({ entry, score: total })
+        if (!matched) continue
+        if (terms.length > 1 && row.text.indexOf(phrase) >= 0) total += 600
+        scored.push({ entry: row.entry, score: total })
       }
       scored.sort((left, right) => right.score - left.score || right.entry.time - left.entry.time)
       return scored.map((row) => row.entry)
+    }
+
+    /** Compatibility wrapper used by small helpers and tests. */
+    function searchEntries(entries, query) {
+      if (searchTerms(query).length === 0) return entries
+      return searchPrepared(prepareSearchEntries(entries), query)
     }
 
     function escapeRegExp(value) {
@@ -276,13 +332,13 @@ window.__ModuleLoader__.load({
     }
 
     /** Build a readable preview that includes the first literal search hit when it is far into a long prompt. */
-    function buildPreview(text, query) {
-      const terms = query.trim().split(/\s+/).filter(Boolean)
+    function buildPreview(text, query, lowerText) {
+      const terms = searchTerms(query)
       if (terms.length === 0) return text.slice(0, 600)
-      const lower = text.toLocaleLowerCase()
+      const lower = lowerText === undefined ? text.toLocaleLowerCase() : lowerText
       let first = -1
       for (const term of terms) {
-        const index = lower.indexOf(term.toLocaleLowerCase())
+        const index = lower.indexOf(term)
         if (index >= 0 && (first < 0 || index < first)) first = index
       }
       if (first > 320) {
@@ -292,13 +348,15 @@ window.__ModuleLoader__.load({
       return text.slice(0, 600)
     }
 
-    function hasLiteralMatch(text, query) {
-      const lower = text.toLocaleLowerCase()
-      return query.trim().split(/\s+/).filter(Boolean).some((term) => lower.includes(term.toLocaleLowerCase()))
+    function hasLiteralMatch(text, query, lowerText) {
+      const terms = searchTerms(query)
+      if (terms.length === 0) return false
+      const lower = lowerText === undefined ? text.toLocaleLowerCase() : lowerText
+      return terms.every((term) => lower.includes(term))
     }
 
     function highlightText(text, query) {
-      const terms = query.trim().split(/\s+/).filter(Boolean)
+      const terms = searchTerms(query)
       if (terms.length === 0) return text
       const unique = [...new Set(terms)].sort((left, right) => right.length - left.length)
       let regex
@@ -348,9 +406,32 @@ window.__ModuleLoader__.load({
       const alive = React.useRef(true)
       const loadedAt = React.useRef(0)
       const controller = React.useRef(null)
+      const etag = React.useRef(null)
+      const bootstrapped = React.useRef(false)
 
       const load = React.useCallback(async (force) => {
         if (controller.current) controller.current.abort()
+        // Share the palette's 30-second cache on the first mount so opening the
+        // page and then the composer palette (or the reverse) does not download
+        // the index twice. Later visibility checks still revalidate with the
+        // server; the ETag makes that a cheap 304.
+        if (!force && !bootstrapped.current && paletteIndex.entries !== null && paletteIndex.meta !== null
+          && Date.now() - paletteIndex.at < PALETTE_CACHE_TTL_MS) {
+          bootstrapped.current = true
+          loadedAt.current = Date.now()
+          paletteIndex.at = Date.now()
+          etag.current = paletteIndex.etag
+          setState({
+            status: 'ready',
+            entries: paletteIndex.entries,
+            meta: paletteIndex.meta,
+            error: null,
+            refreshError: null,
+            refreshing: false,
+          })
+          return
+        }
+        bootstrapped.current = true
         const current = new AbortController()
         controller.current = current
         setState((previous) => ({
@@ -361,20 +442,34 @@ window.__ModuleLoader__.load({
           refreshError: null,
         }))
         try {
+          const headers = { accept: 'application/json' }
+          if (!force && etag.current !== null) headers['if-none-match'] = etag.current
           const response = await fetch(`${API}${force ? '?refresh=1' : ''}`, {
             cache: 'no-store',
-            headers: { accept: 'application/json' },
+            headers,
             signal: current.signal,
           })
+          if (response.status === 304) {
+            if (!alive.current) return
+            loadedAt.current = Date.now()
+            setState((previous) => ({ ...previous, refreshing: false, error: null, refreshError: null }))
+            return
+          }
           const body = await response.json()
           if (!response.ok || !body || body.ok === false) {
             throw new Error((body && body.error) || `HTTP ${response.status}`)
           }
           if (!alive.current) return
           loadedAt.current = Date.now()
+          etag.current = response.headers.get('etag') || etag.current
+          paletteIndex.at = Date.now()
+          paletteIndex.entries = Array.isArray(body.entries) ? body.entries : []
+          paletteIndex.meta = body
+          paletteIndex.etag = response.headers.get('etag') || paletteIndex.etag
+          paletteIndex.error = null
           setState({
             status: 'ready',
-            entries: Array.isArray(body.entries) ? body.entries : [],
+            entries: paletteIndex.entries,
             meta: body,
             error: null,
             refreshError: null,
@@ -555,9 +650,11 @@ window.__ModuleLoader__.load({
         if (timer.current) clearTimeout(timer.current)
       }, [])
 
-      const preview = expanded ? entry.text : buildPreview(entry.text, query)
+      const prepared = preparedEntryFor(entry)
+      const lowerText = prepared && prepared.text
+      const preview = expanded ? entry.text : buildPreview(entry.text, query, lowerText)
       const long = entry.text.length > 260 || entry.text.split('\n').length > 3 || preview !== entry.text
-      const fuzzyOnly = query.trim() !== '' && !hasLiteralMatch(`${entry.text} ${entry.project || ''} ${entry.sessionTitle || ''}`, query)
+      const fuzzyOnly = query.trim() !== '' && !hasLiteralMatch(`${entry.text} ${entry.project || ''} ${entry.sessionTitle || ''}`, query, prepared && prepared.matchText)
 
       const onCopy = async () => {
         try {
@@ -620,12 +717,33 @@ window.__ModuleLoader__.load({
       const t = React.useCallback((key) => translate(locale, key), [locale])
       const { entries, status, refreshError, meta, refreshing, reload } = usePromptIndex()
       const [query, setQuery] = React.useState('')
+      const [visibleCount, setVisibleCount] = React.useState(PROMPT_PAGE_SIZE)
       const inputRef = React.useRef(null)
       const headingRef = React.useRef(null)
-      const results = React.useMemo(() => searchEntries(entries, query), [entries, query])
+      const scrollRef = React.useRef(null)
+      // Defer the expensive filter/sort pass so typing stays responsive even
+      // when the index holds thousands of long prompts.
+      const deferredQuery = React.useDeferredValue(query)
+      const prepared = React.useMemo(() => prepareSearchEntries(entries), [entries])
+      const results = React.useMemo(
+        () => searchPrepared(prepared, deferredQuery),
+        [prepared, deferredQuery],
+      )
+      React.useEffect(() => {
+        setVisibleCount(PROMPT_PAGE_SIZE)
+        if (scrollRef.current) scrollRef.current.scrollTop = 0
+      }, [deferredQuery])
       React.useEffect(() => {
         if (headingRef.current) headingRef.current.focus()
       }, [])
+      const visibleResults = results.length > visibleCount ? results.slice(0, visibleCount) : results
+      const showMore = results.length > visibleCount
+        ? h('div', { className: 'ph-more' },
+          h('button', {
+            type: 'button', className: 'ph-btn',
+            onClick: () => setVisibleCount((value) => Math.min(results.length, value + PROMPT_PAGE_SIZE)),
+          }, fill(t('showMore'), { remaining: results.length - visibleCount })))
+        : null
 
       const subtitle = status === 'loading'
         ? t('subtitleLoading')
@@ -642,14 +760,14 @@ window.__ModuleLoader__.load({
             action: h('button', { type: 'button', className: 'ph-btn ph-btn-primary', onClick: () => reload(true) }, t('retry')),
           })
           : results.length === 0
-            ? query.trim() !== ''
+            ? deferredQuery.trim() !== ''
               ? h(EmptyState, { title: t('noMatchTitle'), hint: t('noMatchHint') })
               : h(EmptyState, { title: t('emptyTitle'), hint: t('emptyHint') })
             : h('div', { className: 'ph-list', role: 'list' },
-              results.map((entry) => h(PromptRow, { key: entry.id, entry, query, locale, t })))
+              visibleResults.map((entry) => h(PromptRow, { key: entry.id, entry, query: deferredQuery, locale, t })))
 
       return h('section', { className: 'ph-root', 'data-testid': 'prompt-history-page', 'aria-label': t('title') },
-        h('div', { className: 'ph-scroll' },
+        h('div', { ref: scrollRef, className: 'ph-scroll' },
           h('div', { className: 'ph-content' },
             h('header', { className: 'ph-heading' },
               h('div', { className: 'ph-heading-copy' },
@@ -680,7 +798,7 @@ window.__ModuleLoader__.load({
                 onClick: () => { setQuery(''); if (inputRef.current) inputRef.current.focus() },
               }, h(CloseIcon, { size: 11 })) : null,
               h('span', { className: 'ph-count', 'aria-live': 'polite' }, status === 'ready'
-                ? query.trim() !== ''
+                ? deferredQuery.trim() !== ''
                   ? fill(t('countFiltered'), { shown: results.length, total: entries.length })
                   : fill(t('countAll'), { total: entries.length })
                 : '')),
@@ -690,6 +808,7 @@ window.__ModuleLoader__.load({
                 h('button', { type: 'button', className: 'ph-notice-btn', onClick: () => reload(true) }, t('retry')))
               : null,
             body,
+            showMore,
             status === 'ready' && meta
               ? h('p', { className: 'ph-foot' },
                 t('footer'),
@@ -947,28 +1066,38 @@ window.__ModuleLoader__.load({
      * The palette shares the page's route with a short-lived stale-while-revalidate
      * cache: reopening is instant, and a failed refresh keeps the previous rows.
      */
-    const paletteIndex = { at: 0, entries: null, error: null, promise: null }
+    const paletteIndex = { at: 0, entries: null, meta: null, error: null, etag: null, promise: null }
 
     function loadPaletteIndex(force) {
       const fresh = paletteIndex.entries !== null && Date.now() - paletteIndex.at < PALETTE_CACHE_TTL_MS
       if (!force && fresh) return Promise.resolve(paletteIndex)
       if (paletteIndex.promise !== null) return paletteIndex.promise
+      const headers = { accept: 'application/json' }
+      if (!force && paletteIndex.etag !== null) headers['if-none-match'] = paletteIndex.etag
       paletteIndex.promise = fetch(`${API}${force ? '?refresh=1' : ''}`, {
         cache: 'no-store',
-        headers: { accept: 'application/json' },
+        headers,
       })
         .then(async (response) => {
+          if (response.status === 304 && paletteIndex.entries !== null) {
+            paletteIndex.at = Date.now()
+            paletteIndex.error = null
+            return paletteIndex
+          }
           const body = await response.json()
           if (!response.ok || !body || body.ok === false) {
             throw new Error((body && body.error) || `HTTP ${response.status}`)
           }
           paletteIndex.at = Date.now()
           paletteIndex.entries = Array.isArray(body.entries) ? body.entries : []
+          paletteIndex.meta = body
+          paletteIndex.etag = response.headers.get('etag') || paletteIndex.etag
           paletteIndex.error = null
           return paletteIndex
         })
         .catch((error) => {
-          paletteIndex.at = Date.now()
+          // Do not refresh the timestamp on failure: the next open should
+          // retry instead of treating a stale payload as fresh for 30 seconds.
           paletteIndex.error = error instanceof Error ? error.message : String(error)
           return paletteIndex
         })
@@ -1404,9 +1533,15 @@ window.__ModuleLoader__.load({
       }, [open, seat, sessionId, focus])
 
       const entries = Array.isArray(data.entries) ? data.entries : []
+      const deferredQuery = React.useDeferredValue(query)
+      const prepared = React.useMemo(() => prepareSearchEntries(entries), [entries])
+      const resultsForQuery = React.useCallback(
+        (value) => searchPrepared(prepared, value).slice(0, PALETTE_RESULT_LIMIT),
+        [prepared],
+      )
       const results = React.useMemo(
-        () => searchEntries(entries, query).slice(0, PALETTE_RESULT_LIMIT),
-        [entries, query],
+        () => resultsForQuery(deferredQuery),
+        [resultsForQuery, deferredQuery],
       )
 
       React.useEffect(() => {
@@ -1515,11 +1650,14 @@ window.__ModuleLoader__.load({
       const onKeyDown = (event) => {
         // Roving keys belong to the search field; the card's buttons keep theirs.
         if (searchRef.current === null || event.target !== searchRef.current) return
+        // Deferred results can trail the last keystroke; keyboard actions must
+        // use the query that is on screen right now.
+        const currentResults = deferredQuery === query ? results : resultsForQuery(query)
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault()
-          if (results.length === 0) return
+          if (currentResults.length === 0) return
           const step = event.key === 'ArrowDown' ? 1 : -1
-          setActive((value) => (value + step + results.length) % results.length)
+          setActive((value) => (value + step + currentResults.length) % currentResults.length)
           return
         }
         if (event.key === 'Enter' || event.key === 'Tab') {
@@ -1529,7 +1667,7 @@ window.__ModuleLoader__.load({
             if (!focus(sessionId)) seat.focusTrigger()
             return
           }
-          const entry = results[active]
+          const entry = currentResults[Math.min(active, currentResults.length - 1)]
           if (!entry) return
           event.preventDefault()
           applyEntry(entry)
@@ -1545,7 +1683,8 @@ window.__ModuleLoader__.load({
       const renderRow = (entry, index) => {
         // A two-line preview: paragraph breaks become spaces so the clamp shows
         // the opening words instead of an empty line plus an ellipsis.
-        const preview = buildPreview(entry.text, query).replace(/\s+/g, ' ')
+        const prepared = preparedEntryFor(entry)
+        const preview = buildPreview(entry.text, deferredQuery, prepared && prepared.text).replace(/\s+/g, ' ')
         return h('div', {
           key: entry.id,
           id: `phc-row-${index}`,
@@ -1557,7 +1696,7 @@ window.__ModuleLoader__.load({
           onClick: () => applyEntry(entry),
         },
           h('div', { className: 'phc-row-main' },
-            h('p', { className: 'phc-row-prompt' }, highlightText(preview, query)),
+            h('p', { className: 'phc-row-prompt' }, highlightText(preview, deferredQuery)),
             h('div', { className: 'phc-row-meta' },
               h(FolderIcon, { size: 11 }),
               h('span', { className: 'phc-row-project' }, entry.project || t('unknownProject')),
@@ -1590,7 +1729,7 @@ window.__ModuleLoader__.load({
           : h('div', { className: 'phc-status', role: 'status' },
             data.status === 'error'
               ? t('composerError')
-              : query.trim() === ''
+              : deferredQuery.trim() === ''
                 ? t('composerEmpty')
                 : t('composerNoMatch'))
 
@@ -1634,7 +1773,7 @@ window.__ModuleLoader__.load({
           : null,
         data.status === 'ready'
           ? h('span', { className: 'phc-search-count' },
-            query.trim() === ''
+            deferredQuery.trim() === ''
               ? t('composerCount', { total })
               : t('composerMatches', { shown: count, total }))
           : null),
@@ -1730,7 +1869,10 @@ window.__ModuleLoader__.load({
   overflow: hidden; border: 0.5px solid var(--dsw-alias-border-l1); border-radius: 16px;
   background: var(--dsw-alias-bg-layer-1);
 }
-.ph-row { position: relative; padding: 16px 18px 13px; border-top: 0.5px solid var(--dsw-alias-border-l1); }
+.ph-row {
+  position: relative; padding: 16px 18px 13px; border-top: 0.5px solid var(--dsw-alias-border-l1);
+  content-visibility: auto; contain-intrinsic-size: auto 116px;
+}
 .ph-row:first-child { border-top: 0; }
 @media (hover: hover) { .ph-row:hover { background: var(--dsw-alias-interactive-bg-hover); } }
 .ph-prompt {
@@ -1772,6 +1914,7 @@ window.__ModuleLoader__.load({
 .ph-notice-btn { flex: none; height: 26px; padding: 0 10px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 13px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; cursor: pointer; }
 .ph-notice-btn:hover { background: var(--dsw-alias-interactive-bg-hover); }
 .ph-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.ph-more { display: flex; justify-content: center; padding: 18px 0 4px; }
 .ph-foot { margin: 16px 0 0; text-align: center; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-caption); }
 .ph-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; color: var(--dsw-alias-label-tertiary); }
 .ph-illustration { color: var(--dsw-alias-border-l2); margin-bottom: 16px; }
@@ -1973,7 +2116,7 @@ window.__ModuleLoader__.load({
       return () => style.remove()
     }
 
-    return {
+    const plugin = {
       inject: ['slots', 'locale'],
       apply(ctx) {
         ctx.effect(() => installStyles(), 'prompt-history: styles')
@@ -2016,5 +2159,12 @@ window.__ModuleLoader__.load({
         }, (props) => h(ComposerPalette, { ...props, ctx })))
       },
     }
+    if (typeof globalThis !== 'undefined' && globalThis.__DSH_PROMPT_MANAGE_TEST__ === true) {
+      Object.defineProperty(plugin, '__test', {
+        value: { normalizeSearch, searchTerms, scoreOne, prepareSearchEntries, searchPrepared, searchEntries },
+        enumerable: false,
+      })
+    }
+    return plugin
   },
 })

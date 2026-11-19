@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Prompt history",
-    "description": "Click the prompt history icon left of the model name in the chat input, or open Prompt history from the left sidebar, to reuse every prompt you have typed across conversations. The composer palette searches as you type and Apply inserts the prompt into the input at the caret; the sidebar page lists everything with project, session and time labels plus one-click copy. The wand button immediately left of the prompt history icon rewrites the current draft with your selected model using an editable prompt-optimizer system prompt, then replaces the draft in place. The index reads local session records only and never uploads content."
+    "title": "Prompt Manage",
+    "description": "Click the prompt icon left of the model name in the chat input, or open Prompt Manage from the left sidebar, to reuse every prompt you have typed across conversations. Both the composer palette and the sidebar page search as you type, and space-separated terms all have to match; Apply inserts the prompt at the caret, while the sidebar page lists project, session and time labels plus one-click copy. The wand button immediately left of the prompt icon rewrites the current draft with your selected model using an editable prompt-optimizer system prompt, then replaces the draft in place. The index reads local session records only and never uploads content."
   }
 }
