@@ -24,6 +24,15 @@ test('the visible product name is Prompt Manage / 提示词管理 in both locale
   assert.equal(JSON.parse(read('locale/zh.json')).meta.title, '提示词管理')
 })
 
+test('the README is available in English and Simplified Chinese', () => {
+  const english = read('README.md')
+  const chinese = read('README.zh.md')
+  assert.match(english, /README\.zh\.md/)
+  assert.match(chinese, /README\.md/)
+  assert.ok(english.length > 1000)
+  assert.ok(chinese.length > 1000)
+})
+
 test('the package manifest points at files that exist', () => {
   const pkg = JSON.parse(read('package.json'))
   assert.equal(pkg.dsh.bundle.patch, './cordis.patch.yml')
@@ -31,6 +40,7 @@ test('the package manifest points at files that exist', () => {
   assert.ok(pkg.files.includes('index.js'))
   assert.ok(pkg.files.includes('optimizer.js'))
   assert.ok(pkg.files.includes('prompts/*.md'))
+  assert.ok(pkg.files.includes('README.zh.md'))
   assert.ok(!pkg.private, 'the package must stay publishable')
   assert.equal(pkg.exports['./client'], './client.js')
 })

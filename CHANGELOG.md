@@ -12,6 +12,7 @@ Released on 2026-11-19.
 - Search now explicitly treats whitespace-separated words as an AND query: `react 登录` matches only prompts containing both terms, in any order, across prompt text, project, and session title; matching terms are highlighted when they fall inside the preview window.
 - Render the sidebar list in 100-row pages with a **Show more** button and `content-visibility` for off-screen rows; the composer palette stays capped at 60 results.
 - Add a mock-data screenshot of the composer palette search for the README; every prompt, project, and session visible in it is synthetic.
+- Rewrite the README around user-facing features, screenshots, installation, and usage, remove implementation details, and add a Simplified Chinese version.
 
 ## 0.3.2
 
