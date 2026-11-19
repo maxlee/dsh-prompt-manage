@@ -50,6 +50,8 @@ then to the deployment default model.
 
 ## Using the palette
 
+![Composer palette search](screenshots/composer-palette-search.png)
+
 - Typing in the palette searches prompt text, project names, and session titles
   with the same fuzzy matcher as the page; the newest prompts are listed first
   while the search box is empty. Separate words with spaces to require all of

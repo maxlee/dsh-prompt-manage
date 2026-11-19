@@ -11,6 +11,7 @@ Released on 2026-11-19.
 - Speed up search by preparing lowercased prompt and metadata text once per index, replacing the per-keystroke character loop with native `indexOf` fuzzy matching over the full prompt, and deferring the filter pass so typing stays responsive with thousands of long prompts.
 - Search now explicitly treats whitespace-separated words as an AND query: `react 登录` matches only prompts containing both terms, in any order, across prompt text, project, and session title; matching terms are highlighted when they fall inside the preview window.
 - Render the sidebar list in 100-row pages with a **Show more** button and `content-visibility` for off-screen rows; the composer palette stays capped at 60 results.
+- Add a mock-data screenshot of the composer palette search for the README; every prompt, project, and session visible in it is synthetic.
 
 ## 0.3.2
 
