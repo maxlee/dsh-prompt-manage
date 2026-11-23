@@ -24,6 +24,13 @@ test('the visible product name is Prompt Manage / 提示词管理 in both locale
   assert.equal(JSON.parse(read('locale/zh.json')).meta.title, '提示词管理')
 })
 
+test('the README header uses the packaged plugin icon', () => {
+  const pkg = JSON.parse(read('package.json'))
+  assert.equal(pkg.icon, 'icon.svg')
+  assert.match(read('README.md'), /<img src="icon\.svg"/)
+  assert.match(read('README.zh.md'), /<img src="icon\.svg"/)
+})
+
 test('the README is available in English and Simplified Chinese', () => {
   const english = read('README.md')
   const chinese = read('README.zh.md')

@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/icon-512.png" width="96" alt="Prompt Manage icon"></p>
+<p align="center"><img src="icon.svg" width="96" height="96" alt="Prompt Manage icon"></p>
 
 # Prompt Manage
 
