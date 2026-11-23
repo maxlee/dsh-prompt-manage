@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 Released on 2026-11-23.
 
-- Point the README header in both languages at `icon.svg`, the package icon the DSH Plugins page renders, so the README no longer shows a stale raster copy of the plugin artwork; regenerate `assets/icon-512.png` from the same source for the catalog listing.
+- Replace the package icon (`icon.svg`) and its 512px catalog render (`assets/icon-512.png`) with the clock-history mark that matches the current composer and sidebar glyph, and point the README header in both languages at `icon.svg` so the README and the DSH Plugins page show the same current artwork.
 
 ## 0.4.0
 

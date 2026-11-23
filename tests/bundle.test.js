@@ -27,6 +27,7 @@ test('the visible product name is Prompt Manage / 提示词管理 in both locale
 test('the README header uses the packaged plugin icon', () => {
   const pkg = JSON.parse(read('package.json'))
   assert.equal(pkg.icon, 'icon.svg')
+  assert.match(read('icon.svg'), /ph-icon-history/)
   assert.match(read('README.md'), /<img src="icon\.svg"/)
   assert.match(read('README.zh.md'), /<img src="icon\.svg"/)
 })

@@ -3,7 +3,7 @@
 ## Lucide icons
 
 The history (clock with rewind arrow) and optimize (magic wand with sparkles)
-SVG geometries in `client.js` are adapted from
+SVG geometries in `client.js` and `icon.svg` are adapted from
 [Lucide](https://lucide.dev), Copyright (c) 2022 Lucide Contributors,
 licensed under the ISC License:
 
